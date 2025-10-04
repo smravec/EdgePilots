@@ -8,7 +8,7 @@ model = Model("./vosk-model-small-en-us-0.15")
 
 # Define wake word and command keywords
 wake_word = "transmitter"
-commands = ["forward", "backward", "left", "right", "stop", "fire", "revert"]
+commands = ["forward", "stop", "fire", "revert"]
 keywords = [wake_word] + commands
 
 # Create recognizer with keywords

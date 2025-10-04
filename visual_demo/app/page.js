@@ -258,6 +258,54 @@ export default function Home() {
     carGroup.position.y = 0;
     scene.add(carGroup);
 
+    // Add Putin image standing upright ahead of vehicle
+    let imageplane = null;
+    let isImageHit = false;
+    let imageFallProgress = 0;
+    const bloodParticles = [];
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load("/Putin.png", (texture) => {
+      const imageSize = 6; // Size of the image (smaller)
+      const imageGeometry = new THREE.PlaneGeometry(imageSize, imageSize);
+      const imageMaterial = new THREE.MeshStandardMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
+      });
+      imageplane = new THREE.Mesh(imageGeometry, imageMaterial);
+      // No rotation - stands upright facing the vehicle
+      imageplane.position.set(0, imageSize / 2, -50); // 50 units ahead, centered at half height
+      imageplane.receiveShadow = true;
+      imageplane.castShadow = true;
+      imageplane.userData.imageSize = imageSize; // Store size for later use
+      scene.add(imageplane);
+    });
+
+    // Function to create blood particles
+    function createBloodParticles(position) {
+      const particleCount = 20;
+      const particleGeometry = new THREE.SphereGeometry(0.3, 4, 4);
+      const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+      for (let i = 0; i < particleCount; i++) {
+        const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+        particle.position.copy(position);
+
+        // Random velocity for particles
+        particle.userData.velocity = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.3,
+          Math.random() * 0.4 + 0.2,
+          (Math.random() - 0.5) * 0.3
+        );
+        particle.userData.gravity = -0.02;
+        particle.userData.lifetime = 60; // frames
+
+        scene.add(particle);
+        bloodParticles.push(particle);
+      }
+    }
+
     // Camera position
     camera.position.set(0, 8, 12);
     camera.lookAt(0, 0, 0);
@@ -372,6 +420,53 @@ export default function Home() {
         muzzleFlashMaterial.opacity = 0;
         barrel.position.z = -1.8;
         barrelTip.position.z = -3.2;
+      }
+
+      // Check if shooting at image
+      if (imageplane && !isImageHit && robotState === "shooting") {
+        const distanceToImage = Math.abs(
+          carGroup.position.z - imageplane.position.z
+        );
+        if (distanceToImage <= 15) {
+          isImageHit = true;
+          createBloodParticles(imageplane.position.clone());
+        }
+      }
+
+      // Animate image falling backwards
+      if (isImageHit && imageplane && imageFallProgress < 1) {
+        imageFallProgress += 0.01;
+
+        const imageSize = imageplane.userData.imageSize;
+        const rotationAngle = (imageFallProgress * Math.PI) / 2;
+
+        // Rotate backwards around bottom edge
+        imageplane.rotation.x = rotationAngle;
+
+        // Calculate new position based on rotation around bottom edge
+        // As it rotates, the center moves down and back
+        const centerOffset = (imageSize / 2) * Math.sin(rotationAngle);
+
+        imageplane.position.y = (imageSize / 2) * Math.cos(rotationAngle);
+        imageplane.position.z = -50 - centerOffset;
+      }
+
+      // Update blood particles
+      for (let i = bloodParticles.length - 1; i >= 0; i--) {
+        const particle = bloodParticles[i];
+
+        // Update velocity and position
+        particle.userData.velocity.y += particle.userData.gravity;
+        particle.position.add(particle.userData.velocity);
+
+        // Decrease lifetime
+        particle.userData.lifetime--;
+
+        // Remove dead particles
+        if (particle.userData.lifetime <= 0 || particle.position.y < 0) {
+          scene.remove(particle);
+          bloodParticles.splice(i, 1);
+        }
       }
 
       // Infinite terrain generation

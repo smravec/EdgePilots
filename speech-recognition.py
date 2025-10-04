@@ -47,9 +47,11 @@ def callback(indata, frames, time, status):
                     waiting_for_wake = True
                     print("Waiting for wake word again...")
             else:
-                if not waiting_for_wake:
-                    waiting_for_wake = True
-                    print("Waiting for wake word again...")
+                partial = json.loads(rec.PartialResult()).get("partial", "").lower()
+                if wake_word in partial:
+                    print(f"(Partial) Wake word '{wake_word}' detected...")
+                    waiting_for_wake = False
+
 
 def add_keyword(new_word):
     global keywords, rec

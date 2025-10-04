@@ -8,7 +8,7 @@ model = Model("./vosk-model-small-en-us-0.15")
 
 # Define wake word and command keywords
 wake_word = "transmitter"
-commands = ["forward", "backward", "left", "right", "stop"]
+commands = ["forward", "backward", "left", "right", "stop", "fire", "revert"]
 keywords = [wake_word] + commands
 
 # Create recognizer with keywords
@@ -22,7 +22,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 waiting_for_wake = True
 
 def callback(indata, frames, time, status):
-    global waiting_for_wake, rec
+    global waiting_for_wake
 
     if rec.AcceptWaveform(bytes(indata)):
         result = rec.Result()
@@ -31,39 +31,25 @@ def callback(indata, frames, time, status):
             return
 
         print("Recognized:", text)
-
         words = text.split()
-
-        # Case 1: Both wake word and command are in same phrase
-        if wake_word in words:
-            # Find if any command is also in the same phrase
-            found_command = next((cmd for cmd in commands if cmd in words), None)
-            if found_command:
-                print(f"Wake word '{wake_word}' detected with command '{found_command}'.")
-                print(f"Command: {found_command.capitalize()}")
-                sock.sendto(found_command.encode(), (UDP_IP, UDP_PORT))
-                waiting_for_wake = True  # back to waiting for wake
-                print("Waiting for wake word again...")
-                return
-            else:
-                print(f"Wake word '{wake_word}' detected. Listening for a command...")
+        
+        for word in words:
+            if word == wake_word:
+                print(f"Wake word '{wake_word}' detected. Ready for commands...")
                 waiting_for_wake = False
-                return
-
-        # Case 2: Already heard wake word, now waiting for command
-        if not waiting_for_wake:
-            found_command = next((cmd for cmd in commands if cmd in words), None)
-            if found_command:
-                print(f"Command: {found_command.capitalize()}")
-                sock.sendto(found_command.encode(), (UDP_IP, UDP_PORT))
-                waiting_for_wake = True
-                print("Waiting for wake word again...")
+            elif word in commands:
+                if word == "revert":
+                    waiting_for_wake = True
+                    print("Waiting for wake word again...")
+                if not waiting_for_wake:
+                    print(f"Command: {word.capitalize()}")
+                    sock.sendto(word.encode(), (UDP_IP, UDP_PORT))
+                    waiting_for_wake = True
+                    print("Waiting for wake word again...")
             else:
-                print("No valid command detected.")
-        # Case 3: Heard something else entirely
-        else:
-            # Ignore anything without wake word when waiting
-            pass
+                if not waiting_for_wake:
+                    waiting_for_wake = True
+                    print("Waiting for wake word again...")
 
 def add_keyword(new_word):
     global keywords, rec

@@ -32,6 +32,13 @@ export default function Home() {
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
+    // Increase shadow camera bounds
+    directionalLight.shadow.camera.left = -25;
+    directionalLight.shadow.camera.right = 25;
+    directionalLight.shadow.camera.top = 25;
+    directionalLight.shadow.camera.bottom = -25;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
     scene.add(directionalLight);
 
     // Infinite terrain system
@@ -43,8 +50,8 @@ export default function Home() {
       // Create ground plane
       const planeGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
       const planeMaterial = new THREE.MeshStandardMaterial({
-        color: 0x808080,
-        roughness: 0.9,
+        color: 0xf5f5f5,
+        roughness: 0.8,
       });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
       plane.rotation.x = -Math.PI / 2;
@@ -73,111 +80,145 @@ export default function Home() {
       grids.push(planeData.grid);
     }
 
-    // Create military robot
+    // Create tracked military vehicle
     const carGroup = new THREE.Group();
 
-    // Robot materials
+    // Vehicle materials - matching the beige/tan military vehicle
     const bodyMaterial = new THREE.MeshStandardMaterial({
-      color: 0x3a4a2a,
+      color: 0xc9b896, // Beige/tan hull color
       roughness: 0.6,
-      metalness: 0.6,
+      metalness: 0.3,
     });
 
-    const jointMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2a2a2a,
-      roughness: 0.4,
-      metalness: 0.8,
+    const trackMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1a1a1a, // Black tracks
+      roughness: 0.9,
+      metalness: 0.2,
     });
 
-    // Main body (central chassis)
-    const bodyGeometry = new THREE.BoxGeometry(2.5, 1.2, 3);
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 2.5;
+    const detailMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3a3a3a, // Dark gray weapon system and details
+      roughness: 0.6,
+      metalness: 0.5,
+    });
+
+    // Main hull (lower body)
+    const hullGeometry = new THREE.BoxGeometry(2.8, 0.8, 4.5);
+    const body = new THREE.Mesh(hullGeometry, bodyMaterial);
+    body.position.y = 1.2;
     body.castShadow = true;
     carGroup.add(body);
 
-    // Create four legs with animation support
-    const legs = {};
-    const legPositions = [
-      { x: -1.2, z: 1.2, name: "frontLeft" },
-      { x: 1.2, z: 1.2, name: "frontRight" },
-      { x: -1.2, z: -1.2, name: "backLeft" },
-      { x: 1.2, z: -1.2, name: "backRight" },
-    ];
+    // Upper hull section with angled sides
+    const upperHullGeometry = new THREE.BoxGeometry(2.4, 0.6, 3.5);
+    const upperHull = new THREE.Mesh(upperHullGeometry, bodyMaterial);
+    upperHull.position.y = 1.9;
+    upperHull.castShadow = true;
+    carGroup.add(upperHull);
 
-    legPositions.forEach((legPos) => {
-      // Create a group for each leg for easier animation
-      const legGroup = new THREE.Group();
-      legGroup.position.set(legPos.x, 2.5, legPos.z);
+    // Side armor panels
+    const sideArmorGeometry = new THREE.BoxGeometry(0.1, 1, 4.2);
+    const leftArmor = new THREE.Mesh(sideArmorGeometry, detailMaterial);
+    leftArmor.position.set(-1.5, 1.2, 0);
+    leftArmor.castShadow = true;
+    carGroup.add(leftArmor);
 
-      // Upper leg joint (hip)
-      const hipGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-      const hip = new THREE.Mesh(hipGeometry, jointMaterial);
-      hip.position.set(0, 0, 0);
-      hip.castShadow = true;
-      legGroup.add(hip);
+    const rightArmor = new THREE.Mesh(sideArmorGeometry, detailMaterial);
+    rightArmor.position.set(1.5, 1.2, 0);
+    rightArmor.castShadow = true;
+    carGroup.add(rightArmor);
 
-      // Upper leg segment
-      const upperLegGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 12);
-      const upperLeg = new THREE.Mesh(upperLegGeometry, bodyMaterial);
-      upperLeg.position.set(0, -0.6, 0);
-      upperLeg.castShadow = true;
-      legGroup.add(upperLeg);
+    // Track system (treads)
+    const legs = {}; // Keep for animation compatibility
 
-      // Knee joint
-      const kneeGeometry = new THREE.SphereGeometry(0.25, 16, 16);
-      const knee = new THREE.Mesh(kneeGeometry, jointMaterial);
-      knee.position.set(0, -1.2, 0);
-      knee.castShadow = true;
-      legGroup.add(knee);
+    // Left track
+    const leftTrackGeometry = new THREE.BoxGeometry(0.5, 0.7, 5);
+    const leftTrack = new THREE.Mesh(leftTrackGeometry, trackMaterial);
+    leftTrack.position.set(-1.65, 0.6, 0);
+    leftTrack.castShadow = true;
+    carGroup.add(leftTrack);
 
-      // Lower leg segment
-      const lowerLegGeometry = new THREE.CylinderGeometry(0.18, 0.18, 1.2, 12);
-      const lowerLeg = new THREE.Mesh(lowerLegGeometry, bodyMaterial);
-      lowerLeg.position.set(0, -1.8, 0);
-      lowerLeg.castShadow = true;
-      legGroup.add(lowerLeg);
+    // Right track
+    const rightTrack = new THREE.Mesh(leftTrackGeometry, trackMaterial);
+    rightTrack.position.set(1.65, 0.6, 0);
+    rightTrack.castShadow = true;
+    carGroup.add(rightTrack);
 
-      // Foot
-      const footGeometry = new THREE.BoxGeometry(0.4, 0.15, 0.5);
-      const foot = new THREE.Mesh(footGeometry, jointMaterial);
-      foot.position.set(0, -2.42, 0);
-      foot.castShadow = true;
-      legGroup.add(foot);
-
-      carGroup.add(legGroup);
-      legs[legPos.name] = legGroup;
+    // Track wheels (road wheels)
+    const wheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
+    const wheelMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2a2a2a,
+      roughness: 0.8,
+      metalness: 0.3,
     });
 
-    // Gun turret base
-    const turretBaseGeometry = new THREE.CylinderGeometry(0.8, 0.9, 0.5, 16);
-    const turretBase = new THREE.Mesh(turretBaseGeometry, bodyMaterial);
-    turretBase.position.y = 3.35;
-    turretBase.castShadow = true;
-    carGroup.add(turretBase);
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = -2; i <= 2; i++) {
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(side * 1.65, 0.4, i * 1);
+        wheel.castShadow = true;
+        carGroup.add(wheel);
+      }
+    }
 
-    // Gun turret head
-    const turretHeadGeometry = new THREE.BoxGeometry(1.2, 0.8, 1.2);
-    const turretHead = new THREE.Mesh(turretHeadGeometry, bodyMaterial);
-    turretHead.position.y = 3.9;
-    turretHead.castShadow = true;
-    carGroup.add(turretHead);
+    // Front idler wheels
+    for (let side = -1; side <= 1; side += 2) {
+      const idler = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      idler.rotation.z = Math.PI / 2;
+      idler.position.set(side * 1.65, 0.7, 2.7);
+      idler.castShadow = true;
+      carGroup.add(idler);
+    }
 
-    // Gun barrel
-    const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.15, 2, 12);
-    const barrel = new THREE.Mesh(barrelGeometry, jointMaterial);
+    // Rear drive wheels
+    for (let side = -1; side <= 1; side += 2) {
+      const drive = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      drive.rotation.z = Math.PI / 2;
+      drive.position.set(side * 1.65, 0.7, -2.7);
+      drive.castShadow = true;
+      carGroup.add(drive);
+    }
+
+    // Weapon mount base
+    const mountBaseGeometry = new THREE.CylinderGeometry(0.4, 0.5, 0.3, 16);
+    const mountBase = new THREE.Mesh(mountBaseGeometry, detailMaterial);
+    mountBase.position.y = 2.35;
+    mountBase.position.z = 0.5;
+    mountBase.castShadow = true;
+    carGroup.add(mountBase);
+
+    // Weapon turret platform
+    const turretPlatformGeometry = new THREE.BoxGeometry(1, 0.4, 1);
+    const turretPlatform = new THREE.Mesh(turretPlatformGeometry, bodyMaterial);
+    turretPlatform.position.y = 2.65;
+    turretPlatform.position.z = 0.5;
+    turretPlatform.castShadow = true;
+    carGroup.add(turretPlatform);
+
+    // Weapon system box (like in image)
+    const weaponBoxGeometry = new THREE.BoxGeometry(0.8, 0.6, 1.2);
+    const weaponBox = new THREE.Mesh(weaponBoxGeometry, detailMaterial);
+    weaponBox.position.y = 3.15;
+    weaponBox.position.z = 0.5;
+    weaponBox.castShadow = true;
+    carGroup.add(weaponBox);
+
+    // Gun barrel - larger like in the image
+    const barrelGeometry = new THREE.CylinderGeometry(0.12, 0.12, 2.5, 16);
+    const barrel = new THREE.Mesh(barrelGeometry, detailMaterial);
     barrel.rotation.x = Math.PI / 2;
     barrel.rotation.y = Math.PI;
-    barrel.position.set(0, 3.9, -1.6);
+    barrel.position.set(0, 3.15, -1.8);
     barrel.castShadow = true;
     carGroup.add(barrel);
 
     // Gun barrel tip
-    const barrelTipGeometry = new THREE.CylinderGeometry(0.2, 0.15, 0.3, 12);
-    const barrelTip = new THREE.Mesh(barrelTipGeometry, jointMaterial);
+    const barrelTipGeometry = new THREE.CylinderGeometry(0.15, 0.12, 0.3, 16);
+    const barrelTip = new THREE.Mesh(barrelTipGeometry, detailMaterial);
     barrelTip.rotation.x = Math.PI / 2;
     barrelTip.rotation.y = Math.PI;
-    barrelTip.position.set(0, 3.9, -2.75);
+    barrelTip.position.set(0, 3.15, -3.2);
     barrelTip.castShadow = true;
     carGroup.add(barrelTip);
 
@@ -192,22 +233,27 @@ export default function Home() {
       muzzleFlashGeometry,
       muzzleFlashMaterial
     );
-    muzzleFlash.position.set(0, 3.9, -3.2);
+    muzzleFlash.position.set(0, 3.15, -3.6);
     carGroup.add(muzzleFlash);
 
-    // Sensor/camera on turret
-    const sensorGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.2);
-    const sensor = new THREE.Mesh(sensorGeometry, jointMaterial);
-    sensor.position.set(0.4, 4.2, 0.6);
-    sensor.castShadow = true;
-    carGroup.add(sensor);
+    // Sensor/camera boxes on top
+    const sensorGeometry = new THREE.BoxGeometry(0.25, 0.3, 0.25);
+    const sensor1 = new THREE.Mesh(sensorGeometry, detailMaterial);
+    sensor1.position.set(-0.3, 3.5, 0.3);
+    sensor1.castShadow = true;
+    carGroup.add(sensor1);
 
-    // Antenna
-    const antennaGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8);
-    const antenna = new THREE.Mesh(antennaGeometry, jointMaterial);
-    antenna.position.set(-0.8, 3.5, -1);
-    antenna.castShadow = true;
-    carGroup.add(antenna);
+    const sensor2 = new THREE.Mesh(sensorGeometry, detailMaterial);
+    sensor2.position.set(0.3, 3.5, 0.3);
+    sensor2.castShadow = true;
+    carGroup.add(sensor2);
+
+    // Front detail panels
+    const frontPanelGeometry = new THREE.BoxGeometry(2, 0.6, 0.1);
+    const frontPanel = new THREE.Mesh(frontPanelGeometry, detailMaterial);
+    frontPanel.position.set(0, 1.5, 2.3);
+    frontPanel.castShadow = true;
+    carGroup.add(frontPanel);
 
     carGroup.position.y = 0;
     scene.add(carGroup);
@@ -231,22 +277,12 @@ export default function Home() {
         walkCycle = 0; // Reset walk cycle
       } else if (newState === "stopped") {
         robotState = "stopped";
-        // Reset leg positions when stopping
-        legs.frontLeft.rotation.x = 0;
-        legs.frontRight.rotation.x = 0;
-        legs.backLeft.rotation.x = 0;
-        legs.backRight.rotation.x = 0;
-        body.position.y = 2.5;
+        body.position.y = 1.2;
         muzzleFlashMaterial.opacity = 0;
       } else if (newState === "shooting") {
         robotState = "shooting";
         shootCycle = 0; // Reset shoot cycle
-        // Reset leg positions when shooting
-        legs.frontLeft.rotation.x = 0;
-        legs.frontRight.rotation.x = 0;
-        legs.backLeft.rotation.x = 0;
-        legs.backRight.rotation.x = 0;
-        body.position.y = 2.5;
+        body.position.y = 1.2;
       }
     };
 
@@ -293,22 +329,12 @@ export default function Home() {
     function animate() {
       requestAnimationFrame(animate);
 
-      // Walking animation
+      // Walking animation - tracked vehicle
       if (robotState === "walking") {
         walkCycle += 0.1;
 
-        // Front left and back right move together (diagonal pair)
-        const swing1 = Math.sin(walkCycle) * 0.3;
-        legs.frontLeft.rotation.x = swing1;
-        legs.backRight.rotation.x = swing1;
-
-        // Front right and back left move together (diagonal pair)
-        const swing2 = Math.sin(walkCycle + Math.PI) * 0.3;
-        legs.frontRight.rotation.x = swing2;
-        legs.backLeft.rotation.x = swing2;
-
-        // Add slight body bob for realism
-        body.position.y = 2.5 + Math.abs(Math.sin(walkCycle * 2)) * 0.1;
+        // Slight vehicle bob for movement effect
+        body.position.y = 1.2 + Math.sin(walkCycle * 2) * 0.05;
 
         // Move forward
         carGroup.position.z -= carSpeed;
@@ -322,9 +348,9 @@ export default function Home() {
         shootCycle += 0.2;
 
         // Gun recoil effect
-        const recoil = Math.abs(Math.sin(shootCycle * 3)) * 0.15;
-        barrel.position.z = -1.6 + recoil;
-        barrelTip.position.z = -2.75 + recoil;
+        const recoil = Math.abs(Math.sin(shootCycle * 3)) * 0.2;
+        barrel.position.z = -1.8 + recoil;
+        barrelTip.position.z = -3.2 + recoil;
 
         // Muzzle flash effect
         const flashIntensity = Math.random();
@@ -344,8 +370,8 @@ export default function Home() {
       // Reset animations when stopped
       if (robotState === "stopped") {
         muzzleFlashMaterial.opacity = 0;
-        barrel.position.z = -1.6;
-        barrelTip.position.z = -2.75;
+        barrel.position.z = -1.8;
+        barrelTip.position.z = -3.2;
       }
 
       // Infinite terrain generation
@@ -376,6 +402,12 @@ export default function Home() {
       camera.position.x = carGroup.position.x;
       camera.position.z = carGroup.position.z + 12;
       camera.lookAt(carGroup.position);
+
+      // Update directional light to follow vehicle for consistent shadows
+      directionalLight.position.x = carGroup.position.x + 10;
+      directionalLight.position.z = carGroup.position.z + 10;
+      directionalLight.target.position.copy(carGroup.position);
+      directionalLight.target.updateMatrixWorld();
 
       renderer.render(scene, camera);
     }

@@ -28,6 +28,21 @@ app.add_middleware(
 # Shared variable to store the latest command
 latest_command = {"command": ""}
 
+def update_command(command):
+    """Function to update command from external sources (like speech recognition)"""
+    global latest_command
+    latest_command = {"command": command}
+    print(f"Command updated to: {command}")
+
+# Define the /set-command route for external command input
+@app.post("/set-command")
+async def set_command(request_data: dict):
+    global latest_command
+    if "command" in request_data:
+        latest_command["command"] = request_data["command"]
+        return JSONResponse({"status": "success", "command": request_data["command"]})
+    return JSONResponse({"status": "error", "message": "No command provided"}, status_code=400)
+
 # Define the /give-command route for continuous streaming
 @app.get("/give-command")
 async def give_command():

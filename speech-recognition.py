@@ -1,22 +1,41 @@
 from vosk import Model, KaldiRecognizer
 import sounddevice as sd
 import json
-import socket
+import requests
+import time
 
 # Load vosk model
 model = Model("./vosk-model-small-en-us-0.15")
 
 # Define wake word and command keywords
-wake_word = "transmitter"
-commands = ["forward", "stop", "fire", "revert"]
+wake_word = "transmit"
+commands = ["move", "stop", "shoot", "revert"]
 keywords = [wake_word] + commands
 
 # Create recognizer with keywords
 rec = KaldiRecognizer(model, 16000, json.dumps(keywords))
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 5005
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# Command mapping for visual demo
+command_mapping = {
+    "move": "MOVE",
+    "stop": "STOP", 
+    "shoot": "SHOOT",
+    "revert": "STOP"
+}
+
+def send_command_directly(command):
+    """Send command to the gesture server endpoint"""
+    try:
+        mapped_command = command_mapping.get(command, command.upper())
+        response = requests.post("http://127.0.0.1:8000/set-command", 
+                               json={"command": mapped_command},
+                               timeout=1.0)
+        if response.status_code == 200:
+            print(f"Command '{mapped_command}' sent successfully")
+        else:
+            print(f"Failed to send command: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending command: {e}")
 
 # State variable: waiting for wake word or command
 waiting_for_wake = True
@@ -43,7 +62,7 @@ def callback(indata, frames, time, status):
                     print("Waiting for wake word again...")
                 if not waiting_for_wake:
                     print(f"Command: {word.capitalize()}")
-                    sock.sendto(word.encode(), (UDP_IP, UDP_PORT))
+                    send_command_directly(word)
                     waiting_for_wake = True
                     print("Waiting for wake word again...")
             else:

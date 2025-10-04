@@ -440,11 +440,11 @@ export default function Home() {
         const imageSize = imageplane.userData.imageSize;
         const rotationAngle = (imageFallProgress * Math.PI) / 2;
 
-        // Rotate backwards around bottom edge
-        imageplane.rotation.x = rotationAngle;
+        // Rotate backwards around bottom edge (negative rotation so top falls away)
+        imageplane.rotation.x = -rotationAngle;
 
         // Calculate new position based on rotation around bottom edge
-        // As it rotates, the center moves down and back
+        // As it rotates, the center moves down and back (away from vehicle)
         const centerOffset = (imageSize / 2) * Math.sin(rotationAngle);
 
         imageplane.position.y = (imageSize / 2) * Math.cos(rotationAngle);
@@ -533,16 +533,16 @@ export default function Home() {
       <div className="absolute top-4 left-4 bg-black/50 text-white p-4 rounded">
         <h1 className="text-xl font-bold mb-2">Palm Pilots Demo</h1>
 
-        <p className="text-sm">Commands:</p>
+        <p className="text-sm">Hand Gesture Commands:</p>
         <ul className="text-xs ml-4 list-disc">
           <li>
-            <strong>MOVE</strong> - Open Palm
+            <strong>Open Palm</strong> - Move Forward
           </li>
           <li>
-            <strong>STOP</strong> - Closed Fist
+            <strong>Closed Fist</strong> - Stop
           </li>
           <li>
-            <strong>SHOOT</strong> - Pointed Gun
+            <strong>Pointed Gun</strong> - Shoot
           </li>
         </ul>
       </div>

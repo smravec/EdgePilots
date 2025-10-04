@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 # Shared variable to store the latest command
-latest_command = {"command": ""}
+latest_command = {"command": "", "timestamp": 0}
 
 def update_command(command):
     """Function to update command from external sources (like speech recognition)"""
@@ -40,6 +40,7 @@ async def set_command(request_data: dict):
     global latest_command
     if "command" in request_data:
         latest_command["command"] = request_data["command"]
+        latest_command["timestamp"] = time.time()  # Add timestamp for voice commands
         return JSONResponse({"status": "success", "command": request_data["command"]})
     return JSONResponse({"status": "error", "message": "No command provided"}, status_code=400)
 
@@ -47,11 +48,12 @@ async def set_command(request_data: dict):
 @app.get("/give-command")
 async def give_command():
     async def command_stream():
-        prev_command = None
+        prev_timestamp = None
         while True:
-            if latest_command["command"] != prev_command:
+            # Send command if timestamp changed (allows duplicate commands)
+            if latest_command["timestamp"] != prev_timestamp:
                 yield f"data: {latest_command}\n\n"
-                prev_command = latest_command["command"]
+                prev_timestamp = latest_command["timestamp"]
             await asyncio.sleep(0.1)
 
     return StreamingResponse(command_stream(), media_type="text/event-stream")
@@ -70,6 +72,7 @@ def run(args):
     debug_mode = args.debug
     prev_command = None
     command = ""
+    last_turn_time = 0  # Track last turn command time for cooldown
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -90,11 +93,25 @@ def run(args):
                             command = "SHOOT"
                         elif gesture == "palm":
                             command = "MOVE"
+                        elif gesture == "dislike":
+                            command = "LEFT"
+                        elif gesture == "like":
+                            command = "RIGHT"
 
-                        if command != prev_command:
+                        # For turn commands (LEFT/RIGHT), check cooldown before sending
+                        # For other commands, only send when changed to avoid spam
+                        if command in ["LEFT", "RIGHT"]:
+                            current_time = time.time()
+                            # Only send turn command if 1.5 seconds have passed since last turn
+                            if current_time - last_turn_time >= 1.5:
+                                print(command)
+                                latest_command = {"command": command, "timestamp": current_time}
+                                last_turn_time = current_time
+                                prev_command = command
+                        elif command != prev_command:
                             print(command)
-                            latest_command = {"command": command}  # Update the shared variable
-                        prev_command = command
+                            latest_command = {"command": command, "timestamp": time.time()}
+                            prev_command = command
 
                         cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
                         cv2.putText(

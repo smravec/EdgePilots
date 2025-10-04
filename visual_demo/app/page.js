@@ -310,16 +310,17 @@ export default function Home() {
     camera.position.set(0, 8, 12);
     camera.lookAt(0, 0, 0);
 
-    // HTTP command control - states: 'stopped', 'walking', 'shooting'
+    // HTTP command control - states: 'stopped', 'walking', 'shooting', 'turning'
     let robotState = "stopped";
     const carSpeed = 0.1;
+    const turnSpeed = 0.1; // Rotation speed for smooth turns
     let walkCycle = 0;
     let shootCycle = 0;
+    let targetRotation = 0; // Target Y rotation
+    let isTurning = false;
 
     // Function to handle state changes
     const setRobotState = (newState) => {
-      if (newState === robotState) return; // No change needed
-
       if (newState === "walking") {
         robotState = "walking";
         walkCycle = 0; // Reset walk cycle
@@ -331,6 +332,9 @@ export default function Home() {
         robotState = "shooting";
         shootCycle = 0; // Reset shoot cycle
         body.position.y = 1.2;
+      } else if (newState === "turning") {
+        robotState = "turning";
+        isTurning = true;
       }
     };
 
@@ -362,6 +366,14 @@ export default function Home() {
             setRobotState("stopped");
           } else if (command === "SHOOT") {
             setRobotState("shooting");
+          } else if (command === "LEFT") {
+            // Turn 45 degrees left (counterclockwise)
+            targetRotation = carGroup.rotation.y + Math.PI / 4;
+            setRobotState("turning");
+          } else if (command === "RIGHT") {
+            // Turn 45 degrees right (clockwise)
+            targetRotation = carGroup.rotation.y - Math.PI / 4;
+            setRobotState("turning");
           }
         }
       } catch (error) {
@@ -384,10 +396,32 @@ export default function Home() {
         // Slight vehicle bob for movement effect
         body.position.y = 1.2 + Math.sin(walkCycle * 2) * 0.05;
 
-        // Move forward
-        carGroup.position.z -= carSpeed;
+        // Move forward in the direction the tank is facing
+        // When rotation.y = 0, tank faces -Z (forward)
+        // sin(0) = 0, cos(0) = 1, so we get movement in -Z direction
+        const moveX = -Math.sin(carGroup.rotation.y) * carSpeed;
+        const moveZ = -Math.cos(carGroup.rotation.y) * carSpeed;
+        carGroup.position.x += moveX;
+        carGroup.position.z += moveZ;
 
         // Hide muzzle flash when walking
+        muzzleFlashMaterial.opacity = 0;
+      }
+
+      // Turning animation - smooth rotation to target
+      if (robotState === "turning" && isTurning) {
+        const rotationDiff = targetRotation - carGroup.rotation.y;
+        
+        // Check if we're close enough to the target
+        if (Math.abs(rotationDiff) < 0.01) {
+          carGroup.rotation.y = targetRotation;
+          isTurning = false;
+          setRobotState("stopped");
+        } else {
+          // Smoothly rotate towards target
+          carGroup.rotation.y += Math.sign(rotationDiff) * Math.min(turnSpeed, Math.abs(rotationDiff));
+        }
+        
         muzzleFlashMaterial.opacity = 0;
       }
 
@@ -493,9 +527,17 @@ export default function Home() {
         }
       }
 
-      // Update camera to follow car
-      camera.position.x = carGroup.position.x;
-      camera.position.z = carGroup.position.z + 12;
+      // Update camera to follow tank from behind, accounting for rotation
+      const cameraDistance = 12;
+      const cameraHeight = 8;
+      
+      // Calculate camera position behind the tank based on tank's rotation
+      const cameraOffsetX = Math.sin(carGroup.rotation.y) * cameraDistance;
+      const cameraOffsetZ = Math.cos(carGroup.rotation.y) * cameraDistance;
+      
+      camera.position.x = carGroup.position.x + cameraOffsetX;
+      camera.position.y = carGroup.position.y + cameraHeight;
+      camera.position.z = carGroup.position.z + cameraOffsetZ;
       camera.lookAt(carGroup.position);
 
       // Update directional light to follow vehicle for consistent shadows
@@ -544,6 +586,16 @@ export default function Home() {
           <li>
             <strong>Pointed Gun</strong> - Shoot
           </li>
+          <li>
+            <strong>Thumbs Down (Dislike)</strong> - Turn 45° Left
+          </li>
+          <li>
+            <strong>Thumbs Up (Like)</strong> - Turn 45° Right
+          </li>
+        </ul>
+        <p className="text-sm mt-2">Voice Commands:</p>
+        <ul className="text-xs ml-4 list-disc">
+          <li>Say <strong>"transmit"</strong> then <strong>"move/stop/shoot/left/right"</strong></li>
         </ul>
       </div>
     </div>

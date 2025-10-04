@@ -9,7 +9,7 @@ model = Model("./vosk-model-small-en-us-0.15")
 
 # Define wake word and command keywords
 wake_word = "transmit"
-commands = ["move", "stop", "shoot", "revert"]
+commands = ["move", "stop", "shoot", "revert", "left", "right"]
 keywords = [wake_word] + commands
 
 # Create recognizer with keywords
@@ -20,15 +20,18 @@ command_mapping = {
     "move": "MOVE",
     "stop": "STOP", 
     "shoot": "SHOOT",
-    "revert": "STOP"
+    "revert": "STOP",
+    "left": "LEFT",
+    "right": "RIGHT"
 }
 
 def send_command_directly(command):
     """Send command to the gesture server endpoint"""
     try:
+        import time
         mapped_command = command_mapping.get(command, command.upper())
         response = requests.post("http://127.0.0.1:8000/set-command", 
-                               json={"command": mapped_command},
+                               json={"command": mapped_command, "timestamp": time.time()},
                                timeout=1.0)
         if response.status_code == 200:
             print(f"Command '{mapped_command}' sent successfully")

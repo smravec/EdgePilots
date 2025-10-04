@@ -9,3 +9,12 @@ pip install -r requirements.txt
 
 python run_demo.py
 ```
+
+### Speech recognition
+
+Setup your input device on your machine
+
+```
+python speech-recognition.py
+```
+

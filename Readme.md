@@ -1,4 +1,8 @@
-### Dynamic Gestures
+# How to run
+- Start both of the servers for hand and speech recognition
+- Start the web demo to visually see how you can control the UGV
+
+### Hand Gestures
 ```
 cd dynamic_gestures
 
@@ -15,6 +19,14 @@ python run_demo.py
 Setup your input device on your machine
 
 ```
+cd ..
 python speech-recognition.py
+```
+
+### Visual Demo (on http://localhost:3001)
+```
+cd visual_demo
+npm i
+npm run dev
 ```
 

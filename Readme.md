@@ -20,6 +20,7 @@ Setup your input device on your machine
 
 ```
 cd ..
+pip install -r requirements.txt
 python speech-recognition.py
 ```
 
